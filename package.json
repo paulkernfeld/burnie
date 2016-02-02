@@ -1,0 +1,20 @@
+{
+  "name": "burnie",
+  "version": "0.1.0",
+  "description": "An SPV Bitcoin burn verification library built on webcoin",
+  "main": "index.js",
+  "scripts": {
+    "test": "standard"
+  },
+  "author": "Paul Kernfeld",
+  "license": "ISC",
+  "devDependencies": {
+    "standard": "^5.4.1"
+  },
+  "dependencies": {
+    "debug": "^2.2.0",
+    "map-stream": "0.0.6",
+    "webcoin": "^1.0.2",
+    "webcoin-bitcoin": "^0.2.2"
+  }
+}
