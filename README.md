@@ -24,6 +24,11 @@ var Networks = require('bitcore-lib').Networks
 var Node = require('webcoin').Node
 var Burnie = require('burnie')
 
+// Start downloading at the beginning of time. By default webcoin will use
+// a checkpoint which might not work for our purposes.
+// This is a gross hack.
+require('webcoin').constants.checkpoints = {}
+
 // We need to pass in a node
 var node = new Node({
   network: Networks.livenet,

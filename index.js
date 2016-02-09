@@ -1,16 +1,11 @@
 var mapStream = require('map-stream')
-var constants = require('webcoin').constants
 var assert = require('assert')
 var debug = require('debug')('burnie')
-
-// Gross patch to tell webcoin to always start from the beginning of time
-// TODO be less gross
-constants.checkpoints = {}
 
 function Burnie (opts) {
   if (!(this instanceof Burnie)) return new Burnie(opts)
 
-  assert(opts.from)
+  assert(typeof opts.from !== 'undefined')
   assert(Buffer.isBuffer(opts.pubkeyHash))
 
   var self = this
@@ -58,7 +53,11 @@ function Burnie (opts) {
 
   var start = function() {
     debug('Burnie starting...')
-    self.node.createTransactionStream({ from: opts.from }).pipe(self.stream)
+    var transactionStream = self.node.createTransactionStream({ from: opts.from })
+    transactionStream.blocks.on('data', function(block) {
+      if (block.height % 100 === 0) debug('tx stream at', block.height)
+    })
+    transactionStream.pipe(self.stream)
   }
 
   self.node.peers.once('peer', function (peer) {
@@ -66,8 +65,6 @@ function Burnie (opts) {
       start()
     } else {
       var onSync = function (tip) {
-        debug(opts.from - tip.height, 'headers until start')
-
         if (tip.height >= opts.from) {
           self.node.chain.removeListener('sync', onSync)
           start()
@@ -75,6 +72,9 @@ function Burnie (opts) {
       }
       self.node.chain.on('sync', onSync)
     }
+  })
+  self.node.chain.on('sync', function(tip) {
+    debug('headers at', tip.height)
   })
 }
 
