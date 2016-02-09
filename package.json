@@ -16,5 +16,19 @@
     "map-stream": "0.0.6",
     "webcoin": "^1.0.2",
     "webcoin-bitcoin": "^0.2.2"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paulkernfeld/burnie.git"
+  },
+  "keywords": [
+    "webcoin",
+    "spv",
+    "burn",
+    "bitcoin"
+  ],
+  "bugs": {
+    "url": "https://github.com/paulkernfeld/burnie/issues"
+  },
+  "homepage": "https://github.com/paulkernfeld/burnie"
 }
