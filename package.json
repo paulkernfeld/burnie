@@ -1,6 +1,6 @@
 {
   "name": "burnie",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "An SPV Bitcoin burn verification library built on webcoin",
   "main": "index.js",
   "scripts": {
