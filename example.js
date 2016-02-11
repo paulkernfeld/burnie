@@ -41,10 +41,11 @@ var burnie = Burnie({
 })
 
 burnie.stream.on('data', function (burn) {
-  if (burn.inputPubkeyHash) {
-    console.log('Input pubkey hash', burn.inputPubkeyHash.toString('hex'))
-  } else {
-    console.log('Unrecognized inputs')
+  for (var i in burn.tx.transaction.inputs) {
+    var input = burn.tx.transaction.inputs[i]
+    if (input.script.isPublicKeyHashIn()) {
+      console.log('input hash160', input.script.getAddressInfo().hashBuffer.toString('hex'))
+    }
   }
   console.log('block height', burn.blockHeight)
   console.log('block time', new Date(burn.time * 1000))
