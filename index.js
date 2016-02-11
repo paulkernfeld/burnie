@@ -23,7 +23,7 @@ function Burnie (opts) {
   })
 
   this.stream = mapStream(function (tx, callback) {
-    debug('checking tx', tx.hash)
+    debug('checking tx', tx.transaction.hash)
     var outputs = []
     tx.transaction.outputs.forEach(function (output, o) {
       // Ignore outputs that aren't pay-to-pubkey-hash
