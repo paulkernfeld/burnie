@@ -60,7 +60,7 @@ function Burnie (opts) {
     }
   })
 
-  var start = function() {
+  var start = function () {
     debug('burnie starting...')
     self.node.createTransactionStream({ from: opts.from }).pipe(self.stream)
   }
@@ -78,7 +78,7 @@ function Burnie (opts) {
       self.node.chain.on('sync', onSync)
     }
   })
-  self.node.chain.on('sync', function(tip) {
+  self.node.chain.on('sync', function (tip) {
     debug('headers at', tip.height)
   })
 }
