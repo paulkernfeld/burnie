@@ -8,6 +8,8 @@ function Burnie (opts) {
   assert(typeof opts.from !== 'undefined')
   assert(Buffer.isBuffer(opts.pubkeyHash))
 
+  debug('new burnie', opts.pubkeyHash.toString('hex'), opts.from)
+
   var self = this
 
   this.node = opts.node
@@ -21,43 +23,46 @@ function Burnie (opts) {
   })
 
   this.stream = mapStream(function (tx, callback) {
-    for (var o in tx.transaction.outputs) {
+    debug('checking tx', tx.hash)
+    var outputs = []
+    tx.transaction.outputs.forEach(function (output, o) {
       // Ignore outputs that aren't pay-to-pubkey-hash
-      var output = tx.transaction.outputs[o]
-      if (!output.script.isPublicKeyHashOut()) continue
+      if (!output.script.isPublicKeyHashOut()) {
+        debug('ignoring non-pay-to-pubkey-hash output', o)
+        return
+      }
 
       // Ignore outputs to the wrong address
-      var outp = output.script.getAddressInfo().hashBuffer
-      if (outp.equals(self.pubkeyHash)) continue
-
-      // In this case, an output was valid
-      var inputPubkeyHash = null
-      if (tx.transaction.inputs.length === 1) {
-        if (tx.transaction.inputs[0].script.isPublicKeyHashIn()) {
-          inputPubkeyHash = tx.transaction.inputs[0].script.getAddressInfo().hashBuffer
-        }
+      var payToHash = output.script.getAddressInfo().hashBuffer
+      if (!payToHash.equals(self.pubkeyHash)) {
+        debug('ignoring output w/ payment to', o, payToHash)
+        return
       }
-      callback(null, {
+
+      debug('valid output found', o)
+      outputs.push({
         tx: tx,
         satoshis: output.satoshis,
         blockHeight: tx.block.height,
-        time: tx.block.header.time,
-        inputPubkeyHash: inputPubkeyHash
+        time: tx.block.header.time
       })
-      return
-    }
+    })
 
-    // No output was paid to our address, filter this tx out
-    callback()
+    if (outputs.length === 0) {
+      debug('no valid outputs, ignoring')
+      callback()
+    } else if (outputs.length > 1) {
+      debug('multiple valid outputs, ignoring')
+      callback()
+    } else {
+      assert.equal(outputs.length, 1)
+      callback(null, outputs[0])
+    }
   })
 
   var start = function() {
-    debug('Burnie starting...')
-    var transactionStream = self.node.createTransactionStream({ from: opts.from })
-    transactionStream.blocks.on('data', function(block) {
-      if (block.height % 100 === 0) debug('tx stream at', block.height)
-    })
-    transactionStream.pipe(self.stream)
+    debug('burnie starting...')
+    self.node.createTransactionStream({ from: opts.from }).pipe(self.stream)
   }
 
   self.node.peers.once('peer', function (peer) {
