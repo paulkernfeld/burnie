@@ -31,7 +31,7 @@ var node = new Node({
   path: 'data',
   acceptWeb: true
 })
-node.on('error', process.exit)
+node.on('error', console.log)
 
 // The hex form of the address 1CounterpartyXXXXXXXXXXXXXXXUWLpVr.
 var burnie = Burnie({
@@ -51,5 +51,26 @@ burnie.stream.on('data', function (burn) {
   console.log('block time', new Date(burn.time * 1000))
   console.log('satoshis', burn.satoshis, '\n')
 })
+
+node.chain
+  .on('syncing', function (peer) {
+    console.log('Downloading block(s) from peer:', peer.remoteAddress, peer.subversion)
+  })
+  .on('sync', function (tip) {
+    var max = node.chain.syncHeight
+    if (!max && node.chain.downloadPeer) max = node.chain.downloadPeer.bestHeight
+    console.log('Chain sync progress:', tip.height + ' / ' + max,
+      '(' + (Math.round(tip.height / max * 1000) / 10) + '%)',
+      '-', new Date(tip.header.time * 1000).toLocaleDateString())
+  })
+  .on('synced', function (tip) {
+    console.log('Chain up-to-date. height: ' + tip.height +
+      ', hash: ' + tip.header.hash)
+  })
+  .on('block', function (block) {
+    if (node.chain.syncing) return
+    console.log('Received a new block. height: ' + block.height +
+      ', hash: ' + block.header.hash)
+  })
 
 node.start()
