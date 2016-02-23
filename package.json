@@ -9,6 +9,7 @@
   "author": "Paul Kernfeld",
   "license": "ISC",
   "devDependencies": {
+    "brfs": "^1.4.3",
     "standard": "^5.4.1"
   },
   "dependencies": {
