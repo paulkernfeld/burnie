@@ -62,7 +62,8 @@ function Burnie (opts) {
 
   var start = function () {
     debug('burnie starting...')
-    self.node.createTransactionStream({ from: opts.from }).pipe(self.stream)
+    self.txStream = self.node.createTransactionStream({ from: opts.from })
+    self.txStream.pipe(self.stream)
   }
 
   self.node.peers.once('peer', function (peer) {
