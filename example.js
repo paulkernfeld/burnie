@@ -1,76 +1,80 @@
 #!/usr/bin/env node
 
-var Networks = require('bitcore-lib').Networks
-var BlockHeader = require('bitcore-lib').BlockHeader
-var Node = require('webcoin').Node
+var script = require('bitcoinjs-lib').script
+var PeerGroup = require('bitcoin-net').PeerGroup
+var Blockchain = require('blockchain-spv')
+var Filter = require('bitcoin-filter')
+var utils = require('bitcoin-util')
+var params = require('webcoin-bitcoin')
+var levelup = require('levelup')
+var memdown = require('memdown')
 var Burnie = require('.')
-var utils = require('webcoin').utils
 
 // The first Counterparty burn was at block height 278319.
-// Start downloading at height 278000 as an optimization
+// Start downloading at height 278208 as an optimization
 var checkpoint = {
-  height: 278000,
-  header: new BlockHeader({
+  height: 278208, // we use a multiple of 2016, so that we can calculate future
+  // difficulties without needing to check any blocks before this one
+
+  header: {
     version: 2,
-    prevHash: utils.toHash('000000000000000213eb4a93c7843e27a0923b18e89940038cf3f30ec2ec01fa'),
-    merkleRoot: utils.toHash('7a48d491051d1b82b23e77fd51551b52d1cd48cfa4d9abe8271078f7ffaf00d7'),
-    time: 1388536591,
-    bits: 419668748,
-    nonce: 3276557835
-  })
+    prevHash: utils.toHash('0000000000000000a979bc50075e7cdf0da5274f7314910b2d798b1aeaf6543f'),
+    merkleRoot: utils.toHash('e028d69864df2ca00848a65269b3df3e1b3c867b0b4482769462ea38dc487732'),
+    timestamp: 1388624318,
+    bits: 419628831,
+    nonce: 3386334543
+  }
 }
-console.log('checkpoint hash', checkpoint.header.hash)
+params.blockchain.checkpoints = [ checkpoint ]
 
-// TODO: gross
-var constants = require('webcoin').constants
-constants.checkpoints.livenet = checkpoint
+// We need to pass in a PeerGroup
+var peers = new PeerGroup(params.net)
+peers.on('error', console.log)
 
-// We need to pass in a node
-var node = new Node({
-  network: Networks.livenet,
-  path: 'data',
-  acceptWeb: true
-})
-node.on('error', console.log)
+var filter = new Filter(peers, { falsePositiveRate: 0.00001 })
 
-// The hex form of the address 1CounterpartyXXXXXXXXXXXXXXXUWLpVr.
+var db = levelup('chain', { db: memdown })
+var chain = new Blockchain(params.blockchain, db)
+chain.on('error', console.log)
+
 var burnie = Burnie({
-  pubkeyHash: Buffer('818895f3dc2c178629d3d2d8fa3ec4a3f8179821', 'hex'),
-  from: checkpoint.height + 1,
-  node: node
+  address: '1CounterpartyXXXXXXXXXXXXXXXUWLpVr',
+  from: 278621,
+  peers: peers,
+  chain: chain
 })
+filter.add(burnie)
 
 burnie.stream.on('data', function (burn) {
   for (var i in burn.tx.transaction.inputs) {
     var input = burn.tx.transaction.inputs[i]
-    if (input.script.isPublicKeyHashIn()) {
-      console.log('input hash160', input.script.getAddressInfo().hashBuffer.toString('hex'))
+    if (script.isPubKeyHashInput(input.script)) {
+      console.log('input script', input.script.toString('hex'))
     }
   }
   console.log('block height', burn.blockHeight)
   console.log('block time', new Date(burn.time * 1000))
-  console.log('satoshis', burn.satoshis, '\n')
+  console.log('satoshis', burn.satoshis.toString(), '\n')
 })
 
-node.chain
-  .on('syncing', function (peer) {
-    console.log('Downloading block(s) from peer:', peer.remoteAddress, peer.subversion)
-  })
-  .on('sync', function (tip) {
-    var max = node.chain.syncHeight
-    if (!max && node.chain.downloadPeer) max = node.chain.downloadPeer.bestHeight
-    console.log('Chain sync progress:', tip.height + ' / ' + max,
-      '(' + (Math.round(tip.height / max * 1000) / 10) + '%)',
-      '-', new Date(tip.header.time * 1000).toLocaleDateString())
-  })
-  .on('synced', function (tip) {
-    console.log('Chain up-to-date. height: ' + tip.height +
-      ', hash: ' + tip.header.hash)
-  })
-  .on('block', function (block) {
-    if (node.chain.syncing) return
-    console.log('Received a new block. height: ' + block.height +
-      ', hash: ' + block.header.hash)
-  })
+burnie.txStream.blocks.on('data', function (block) {
+  if (block.height % 250 !== 0) return
+  console.log('Blockchain scan at height ' + block.height + ', hash: ' + block.header.getId())
+})
 
-node.start()
+peers.on('peer', function (peer) {
+  console.log('Connected to peer:', peer.socket.remoteAddress, peer.version.userAgent)
+})
+
+chain.on('block', function (block) {
+  if (block.height % 5000 !== 0) return
+  console.log('Header sync at height ' + block.height + ', hash: ' + block.header.getId())
+})
+
+peers.once('peer', function () {
+  chain.getLocator(function (err, locator) {
+    if (err) throw err
+    peers.createHeaderStream({ locator: locator }).pipe(chain.createWriteStream())
+  })
+})
+peers.connect()
