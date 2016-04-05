@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-var script = require('bitcoinjs-lib').script
+var buffertools = require('buffertools')
+var bitcoin = require('bitcoinjs-lib')
 var PeerGroup = require('bitcoin-net').PeerGroup
 var Blockchain = require('blockchain-spv')
 var Filter = require('bitcoin-filter')
@@ -39,36 +40,24 @@ chain.on('error', console.log)
 
 var burnie = Burnie({
   address: '1CounterpartyXXXXXXXXXXXXXXXUWLpVr',
-  from: 278621,
+  from: 278300,
   peers: peers,
   chain: chain
 })
 filter.add(burnie)
 
 burnie.stream.on('data', function (burn) {
-  for (var i in burn.tx.transaction.inputs) {
-    var input = burn.tx.transaction.inputs[i]
-    if (script.isPubKeyHashInput(input.script)) {
-      console.log('input script', input.script.toString('hex'))
+  console.log('txid', buffertools.reverse(burn.tx.transaction.getHash()).toString('hex'))
+  for (var i in burn.tx.transaction.ins) {
+    var input = burn.tx.transaction.ins[i]
+    if (bitcoin.script.isPubKeyHashInput(input.script)) {
+      var pubkeyHash = bitcoin.crypto.hash160(bitcoin.script.decompile(input.script)[1])
+      console.log('input address', bitcoin.address.toBase58Check(pubkeyHash, 0))
     }
   }
   console.log('block height', burn.blockHeight)
   console.log('block time', new Date(burn.time * 1000))
   console.log('satoshis', burn.satoshis.toString(), '\n')
-})
-
-burnie.txStream.blocks.on('data', function (block) {
-  if (block.height % 250 !== 0) return
-  console.log('Blockchain scan at height ' + block.height + ', hash: ' + block.header.getId())
-})
-
-peers.on('peer', function (peer) {
-  console.log('Connected to peer:', peer.socket.remoteAddress, peer.version.userAgent)
-})
-
-chain.on('block', function (block) {
-  if (block.height % 5000 !== 0) return
-  console.log('Header sync at height ' + block.height + ', hash: ' + block.header.getId())
 })
 
 peers.once('peer', function () {

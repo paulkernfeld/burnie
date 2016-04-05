@@ -100,6 +100,7 @@ Burnie.prototype.onTransaction = function (tx, callback) {
   }
 }
 
+// This provides an API for the bitcoin-filter package
 Burnie.prototype.filterElements = function () {
   return [ this.pubkeyHash ]
 }
