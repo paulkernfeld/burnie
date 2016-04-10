@@ -6,14 +6,15 @@ var PeerGroup = require('bitcoin-net').PeerGroup
 var Blockchain = require('blockchain-spv')
 var Filter = require('bitcoin-filter')
 var utils = require('bitcoin-util')
-var params = require('webcoin-bitcoin')
+var mainnetParams = require('webcoin-bitcoin')
+var testnetParams = require('webcoin-bitcoin-testnet')
 var levelup = require('levelup')
 var memdown = require('memdown')
 var Burnie = require('.')
 
 // The first Counterparty burn was at block height 278319.
 // Start downloading at height 278208 as an optimization
-var checkpoint = {
+var checkpointMainnet = {
   height: 278208, // we use a multiple of 2016, so that we can calculate future
   // difficulties without needing to check any blocks before this one
 
@@ -26,7 +27,25 @@ var checkpoint = {
     nonce: 3386334543
   }
 }
-params.blockchain.checkpoints = [ checkpoint ]
+mainnetParams.blockchain.checkpoints = [ checkpointMainnet ]
+
+var checkpointTestnet = {
+  'height': 153216,
+  'header': {
+    'version': 2,
+    'prevHash': utils.toHash('000000000010a614c60457f8d2ae2bb826d037f52113252888fadda8ed773c9c'),
+    'merkleRoot': utils.toHash('48aecdc48b82f1cbc66dbf825ef8ae87fc1c27ae9106675bc0c34d5b1d02dcf9'),
+    'time': 1386677918,
+    'bits': 453357891,
+    'nonce': 2494835766
+  }
+}
+testnetParams.blockchain.checkpoints = [ checkpointTestnet ]
+
+var testnet = process.argv[2] === '--testnet'
+var params = testnet ? testnetParams : mainnetParams
+var address = testnet ? 'mvCounterpartyXXXXXXXXXXXXXXW24Hef' : '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
+var from = testnet ? 155069 : 278318
 
 // We need to pass in a PeerGroup
 var peers = new PeerGroup(params.net)
@@ -39,8 +58,8 @@ var chain = new Blockchain(params.blockchain, db)
 chain.on('error', console.log)
 
 var burnie = Burnie({
-  address: '1CounterpartyXXXXXXXXXXXXXXXUWLpVr',
-  from: 278300,
+  address: address,
+  from: from,
   peers: peers,
   chain: chain
 })
