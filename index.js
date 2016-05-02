@@ -56,8 +56,9 @@ inherits(Burnie, EventEmitter)
 
 Burnie.prototype.start = function () {
   var self = this
-  debug('burnie starting...')
+  debug('burnie starting headers...')
   this.chain.getBlockAtHeight(this.from, function (err, block) {
+    debug('burnie starting blocks...')
     if (err) return self.emit('error', err)
     self.chain.createReadStream({ from: block.header.getHash() }).pipe(self.txStream)
   })
