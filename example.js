@@ -12,12 +12,16 @@ var levelup = require('levelup')
 var sublevel = require('level-sublevel')
 var Burnie = require('.')
 
+// This example shows Bitcoins that were burned to buy units of the Counterparty currency.
+// For a bit more on Counterparty proof-of-burn, see here: http://counterparty.io/news/why-proof-of-burn/
+//
+// Note that this example can be run with the --testnet command line arg, which will make it look at the testnet.
+
 // The first Counterparty burn was at block height 278319.
-// Start downloading at height 278208 as an optimization
+// Start downloading at height 278208 so we don't have to start at the beginning of time.
 var checkpointMainnet = {
   height: 278208, // we use a multiple of 2016, so that we can calculate future
   // difficulties without needing to check any blocks before this one
-
   header: {
     version: 2,
     prevHash: utils.toHash('0000000000000000a979bc50075e7cdf0da5274f7314910b2d798b1aeaf6543f'),
