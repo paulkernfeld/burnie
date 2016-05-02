@@ -9,7 +9,7 @@ var utils = require('bitcoin-util')
 var mainnetParams = require('webcoin-bitcoin')
 var testnetParams = require('webcoin-bitcoin-testnet')
 var levelup = require('levelup')
-var memdown = require('memdown')
+var sublevel = require('level-sublevel')
 var Burnie = require('.')
 
 // The first Counterparty burn was at block height 278319.
@@ -53,8 +53,9 @@ peers.on('error', console.log)
 
 var filter = new Filter(peers, { falsePositiveRate: 0.00001 })
 
-var db = levelup('chain', { db: memdown })
-var chain = new Blockchain(params.blockchain, db)
+var masterDb = sublevel(levelup('./example.db'))
+var db = masterDb.sublevel(testnet ? 'testnet' : 'livenet')
+var chain = new Blockchain(params.blockchain, db.sublevel('chain'))
 chain.on('error', console.log)
 
 var burnie = Burnie({
