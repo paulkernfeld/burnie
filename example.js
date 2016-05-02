@@ -82,8 +82,6 @@ burnie.stream.on('data', function (burn) {
       console.log('input address', bitcoin.address.toBase58Check(pubkeyHash, 0))
     }
   }
-  console.log('block height', burn.blockHeight)
-  console.log('block time', new Date(burn.time * 1000))
   console.log('satoshis', burn.satoshis.toString(), '\n')
 })
 

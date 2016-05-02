@@ -33,9 +33,18 @@ function Burnie (opts) {
     self.emit('error', err)
   })
 
-  this.stream = mapStream(this.onTransaction.bind(this))
+  //this.db.createValueStream().pipe(process.stdout)
+
+  this.burnsStream = mapStream(this.txToBurns.bind(this))
+  this.stream = mapStream(this.burnsToResult.bind(this))
+  this.burnsStream.pipe(this.stream)
+
   self.txStream = self.peers.createTransactionStream({ filtered: self.filtered })
-  self.txStream.pipe(self.stream)
+  self.txStream.pipe(self.burnsStream)
+
+  self.stream.on('error', console.log)
+  self.burnsStream.on('error', console.log)
+  self.txStream.on('error', console.log)
 
   // TODO: get webcoin API to handle this for us
   self.peers.once('peer', function (peer) {
@@ -64,9 +73,9 @@ Burnie.prototype.start = function () {
   })
 }
 
-Burnie.prototype.onTransaction = function (tx, callback) {
+Burnie.prototype.txToBurns = function (tx, cb) {
   debug('checking tx', tx.transaction.getId())
-  var results = []
+  var burns = []
   var self = this
 
   tx.transaction.outs.forEach(function (output, o) {
@@ -83,24 +92,33 @@ Burnie.prototype.onTransaction = function (tx, callback) {
       return
     }
 
-    debug('valid output found', o, output)
-    results.push({
+    debug('valid output found', o)
+    burns.push({
       tx: tx,
       satoshis: output.value
     })
   })
 
+  cb(null, {
+    height: tx.block.height,
+    results: burns
+  })
+}
+
+Burnie.prototype.burnsToResult = function (tx, cb) {
+  var results = tx.results
   if (results.length === 0) {
     debug('no valid outputs, ignoring')
-    callback()
+    cb()
   } else if (results.length > 1) {
     debug('multiple valid outputs, ignoring')
-    callback()
+    cb()
   } else {
     assert.equal(results.length, 1)
-    callback(null, results[0])
+    cb(null, results[0])
   }
 }
+
 
 // This provides an API for the bitcoin-filter package
 Burnie.prototype.filterElements = function () {
