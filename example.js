@@ -2,6 +2,7 @@
 
 var buffertools = require('buffertools')
 var bitcoin = require('bitcoinjs-lib')
+var networks = bitcoin.networks
 var PeerGroup = require('bitcoin-net').PeerGroup
 var Blockchain = require('blockchain-spv')
 var Filter = require('bitcoin-filter')
@@ -50,6 +51,7 @@ var testnet = process.argv[2] === '--testnet'
 var params = testnet ? testnetParams : mainnetParams
 var address = testnet ? 'mvCounterpartyXXXXXXXXXXXXXXW24Hef' : '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
 var from = testnet ? 155069 : 278318
+var network = testnet ? networks.testnet : networks.bitcoin
 
 // We need to pass in a PeerGroup
 var peers = new PeerGroup(params.net)
@@ -66,7 +68,8 @@ var burnie = Burnie({
   address: address,
   from: from,
   peers: peers,
-  chain: chain
+  chain: chain,
+  network: network
 })
 filter.add(burnie)
 

@@ -13,6 +13,7 @@ function Burnie (opts) {
   assert(typeof opts.chain !== 'undefined')
   assert(typeof opts.from === 'number')
   assert(typeof opts.address === 'string')
+  assert(typeof opts.network !== 'undefined')
 
   EventEmitter.call(this)
 
@@ -26,6 +27,7 @@ function Burnie (opts) {
   this.address = opts.address
   this.pubkeyHash = address.fromBase58Check(this.address).hash
   this.filtered = opts.filtered != null ? opts.filtered : true
+  this.network = opts.network
 
   this.peers.on('error', function (err) {
     self.emit('error', err)
@@ -73,7 +75,7 @@ Burnie.prototype.onTransaction = function (tx, callback) {
     }
 
     // Ignore outputs to the wrong address
-    var payToAddress = address.fromOutputScript(output.script)
+    var payToAddress = address.fromOutputScript(output.script, self.network)
     if (payToAddress !== self.address) {
       debug('ignoring output w/ payment to', o, payToAddress)
       return
