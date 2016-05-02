@@ -68,6 +68,7 @@ Burnie.prototype.onTransaction = function (tx, callback) {
   debug('checking tx', tx.transaction.getId())
   var results = []
   var self = this
+
   tx.transaction.outs.forEach(function (output, o) {
     // Ignore outputs that aren't pay-to-pubkey-hash
     if (!script.isPubKeyHashOutput(output.script)) {
@@ -85,9 +86,7 @@ Burnie.prototype.onTransaction = function (tx, callback) {
     debug('valid output found', o, output)
     results.push({
       tx: tx,
-      satoshis: output.value,
-      blockHeight: tx.block.height,
-      time: tx.block.header.timestamp
+      satoshis: output.value
     })
   })
 
