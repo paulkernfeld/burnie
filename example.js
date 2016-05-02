@@ -35,7 +35,7 @@ var checkpointTestnet = {
     'version': 2,
     'prevHash': utils.toHash('000000000010a614c60457f8d2ae2bb826d037f52113252888fadda8ed773c9c'),
     'merkleRoot': utils.toHash('48aecdc48b82f1cbc66dbf825ef8ae87fc1c27ae9106675bc0c34d5b1d02dcf9'),
-    'time': 1386677918,
+    'timestamp': 1386677918,
     'bits': 453357891,
     'nonce': 2494835766
   }
