@@ -66,7 +66,7 @@ Burnie.prototype.start = function () {
 
 Burnie.prototype.onTransaction = function (tx, callback) {
   debug('checking tx', tx.transaction.getId())
-  var outputs = []
+  var results = []
   var self = this
   tx.transaction.outs.forEach(function (output, o) {
     // Ignore outputs that aren't pay-to-pubkey-hash
@@ -83,7 +83,7 @@ Burnie.prototype.onTransaction = function (tx, callback) {
     }
 
     debug('valid output found', o, output)
-    outputs.push({
+    results.push({
       tx: tx,
       satoshis: output.value,
       blockHeight: tx.block.height,
@@ -91,15 +91,15 @@ Burnie.prototype.onTransaction = function (tx, callback) {
     })
   })
 
-  if (outputs.length === 0) {
+  if (results.length === 0) {
     debug('no valid outputs, ignoring')
     callback()
-  } else if (outputs.length > 1) {
+  } else if (results.length > 1) {
     debug('multiple valid outputs, ignoring')
     callback()
   } else {
-    assert.equal(outputs.length, 1)
-    callback(null, outputs[0])
+    assert.equal(results.length, 1)
+    callback(null, results[0])
   }
 }
 
