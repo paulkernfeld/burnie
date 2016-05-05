@@ -9,6 +9,13 @@ var mapStream = require('map-stream')
 var debug = require('debug')('burnie')
 var CacheLiveStream = require('cache-live-stream')
 
+var bubbleError = function (from, to, name) {
+  from.on('error', function (err) {
+    console.log('error:', name)
+    to.emit('error', err)
+  })
+}
+
 function Burnie (opts) {
   if (!(this instanceof Burnie)) return new Burnie(opts)
 
@@ -34,19 +41,16 @@ function Burnie (opts) {
   this.network = opts.network
   this.db = opts.db
 
-  this.peers.on('error', function (err) {
-    self.emit('error', err)
-  })
-
   this.burnsStream = mapStream(this.txToBurns.bind(this))
   this.stream = mapStream(this.burnsToResult.bind(this))
 
   self.txStream = self.peers.createTransactionStream({ filtered: self.filtered })
   self.txStream.pipe(self.burnsStream)
 
-  self.stream.on('error', console.log)
-  self.burnsStream.on('error', console.log)
-  self.txStream.on('error', console.log)
+  bubbleError(this.peers, this, 'peers')
+  bubbleError(self.stream, self, 'stream')
+  bubbleError(self.burnsStream, self, 'burnsStream')
+  bubbleError(self.txStream, self, 'txStream')
 
   // TODO: get webcoin API to handle this for us
   self.peers.once('peer', function (peer) {
@@ -80,8 +84,12 @@ Burnie.prototype.start = function () {
 
     debug('burnie starting headers at height', from)
     self.chain.getBlockAtHeight(from, function (err, block) {
+      if (err) {
+        console.log('error looking up block at height', from)
+        return self.emit('error', err)
+      }
       debug('burnie starting blocks...')
-      if (err) return self.emit('error', err)
+
       self.chain.createReadStream({ from: block.header.getHash() }).pipe(self.txStream)
       cb(null, self.burnsStream)
     })
@@ -89,6 +97,8 @@ Burnie.prototype.start = function () {
 
   this.cache = CacheLiveStream(this.db, makeStream)
   this.cache.readable.pipe(this.stream)
+
+  bubbleError(self.cache.readable, self, 'cache.readable')
 }
 
 Burnie.prototype.txToBurns = function (tx, cb) {

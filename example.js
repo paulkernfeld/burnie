@@ -55,7 +55,6 @@ var network = testnet ? networks.testnet : networks.bitcoin
 
 // We need to pass in a PeerGroup
 var peers = new PeerGroup(params.net)
-peers.on('error', console.log)
 
 var filter = new Filter(peers, { falsePositiveRate: 0.00001 })
 
