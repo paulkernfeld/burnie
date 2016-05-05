@@ -52,6 +52,12 @@ function Burnie (opts) {
   bubbleError(self.burnsStream, self, 'burnsStream')
   bubbleError(self.txStream, self, 'txStream')
 
+  self.chain.on('block', function (block) {
+    if (block.height % 1000 === 0) {
+      debug('headers at', block.height)
+    }
+  })
+
   // TODO: get webcoin API to handle this for us
   self.peers.once('peer', function (peer) {
     if (self.chain.tip.height >= opts.from) {
@@ -83,14 +89,20 @@ Burnie.prototype.start = function () {
     }
 
     debug('burnie starting headers at height', from)
-    self.chain.getBlockAtHeight(from, function (err, block) {
+    self.chain.getBlockAtHeight(from, function (err, startBlock) {
       if (err) {
         console.log('error looking up block at height', from)
         return self.emit('error', err)
       }
       debug('burnie starting blocks...')
 
-      self.chain.createReadStream({ from: block.header.getHash() }).pipe(self.txStream)
+      var readStream = self.chain.createReadStream({ from: startBlock.header.getHash() })
+      readStream.pipe(self.txStream)
+      readStream.on('data', function (block) {
+        if (block.height % 1000 === 0) {
+          debug('txs at', block.height)
+        }
+      })
       cb(null, self.burnsStream)
     })
   }
