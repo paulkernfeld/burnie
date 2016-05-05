@@ -2,9 +2,12 @@ var assert = require('assert')
 var EventEmitter = require('events')
 var address = require('bitcoinjs-lib').address
 var script = require('bitcoinjs-lib').script
+var Transaction = require('bitcoinjs-lib').Transaction
+var Block = require('bitcoinjs-lib').Block
 var inherits = require('inherits')
 var mapStream = require('map-stream')
 var debug = require('debug')('burnie')
+var CacheLiveStream = require('cache-live-stream')
 
 function Burnie (opts) {
   if (!(this instanceof Burnie)) return new Burnie(opts)
@@ -14,6 +17,7 @@ function Burnie (opts) {
   assert(typeof opts.from === 'number')
   assert(typeof opts.address === 'string')
   assert(typeof opts.network !== 'undefined')
+  assert(typeof opts.db !== 'undefined')
 
   EventEmitter.call(this)
 
@@ -28,16 +32,14 @@ function Burnie (opts) {
   this.pubkeyHash = address.fromBase58Check(this.address).hash
   this.filtered = opts.filtered != null ? opts.filtered : true
   this.network = opts.network
+  this.db = opts.db
 
   this.peers.on('error', function (err) {
     self.emit('error', err)
   })
 
-  //this.db.createValueStream().pipe(process.stdout)
-
   this.burnsStream = mapStream(this.txToBurns.bind(this))
   this.stream = mapStream(this.burnsToResult.bind(this))
-  this.burnsStream.pipe(this.stream)
 
   self.txStream = self.peers.createTransactionStream({ filtered: self.filtered })
   self.txStream.pipe(self.burnsStream)
@@ -65,12 +67,28 @@ inherits(Burnie, EventEmitter)
 
 Burnie.prototype.start = function () {
   var self = this
-  debug('burnie starting headers...')
-  this.chain.getBlockAtHeight(this.from, function (err, block) {
-    debug('burnie starting blocks...')
-    if (err) return self.emit('error', err)
-    self.chain.createReadStream({ from: block.header.getHash() }).pipe(self.txStream)
-  })
+
+  var makeStream = function (value, cb) {
+    var from
+    if (value) {
+      // Start on the block after the most recent cached one
+      // TODO we could miss transactions like this
+      from = value.height + 1
+    } else {
+      from = self.from
+    }
+
+    debug('burnie starting headers at height', from)
+    self.chain.getBlockAtHeight(from, function (err, block) {
+      debug('burnie starting blocks...')
+      if (err) return self.emit('error', err)
+      self.chain.createReadStream({ from: block.header.getHash() }).pipe(self.txStream)
+      cb(null, self.burnsStream)
+    })
+  }
+
+  this.cache = CacheLiveStream(this.db, makeStream)
+  this.cache.readable.pipe(this.stream)
 }
 
 Burnie.prototype.txToBurns = function (tx, cb) {
@@ -94,31 +112,47 @@ Burnie.prototype.txToBurns = function (tx, cb) {
 
     debug('valid output found', o)
     burns.push({
-      tx: tx,
-      satoshis: output.value
+      tx: {
+        transaction: tx.transaction.toHex(),
+        block: {
+          height: tx.block.height,
+          header: tx.block.header.toHex()
+        }
+      },
+      satoshis: output.value.toNumber()
     })
   })
 
   cb(null, {
     height: tx.block.height,
-    results: burns
+    burns: burns
   })
 }
 
-Burnie.prototype.burnsToResult = function (tx, cb) {
-  var results = tx.results
-  if (results.length === 0) {
+Burnie.prototype.burnsToResult = function (burnInfo, cb) {
+  var burns = burnInfo.burns
+  if (burns.length === 0) {
     debug('no valid outputs, ignoring')
     cb()
-  } else if (results.length > 1) {
+  } else if (burns.length > 1) {
     debug('multiple valid outputs, ignoring')
     cb()
   } else {
-    assert.equal(results.length, 1)
-    cb(null, results[0])
+    assert.equal(burns.length, 1)
+
+    var burn = burns[0]
+    cb(null, {
+      tx: {
+        transaction: Transaction.fromHex(burn.tx.transaction),
+        block: {
+          height: burn.tx.block.height,
+          header: Block.fromHex(burn.tx.block.header)
+        }
+      },
+      satoshis: burn.satoshis
+    })
   }
 }
-
 
 // This provides an API for the bitcoin-filter package
 Burnie.prototype.filterElements = function () {

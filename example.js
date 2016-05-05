@@ -62,14 +62,14 @@ var filter = new Filter(peers, { falsePositiveRate: 0.00001 })
 var masterDb = sublevel(levelup('./example.db'))
 var db = masterDb.sublevel(testnet ? 'testnet' : 'livenet')
 var chain = new Blockchain(params.blockchain, db.sublevel('chain'))
-chain.on('error', console.log)
 
 var burnie = Burnie({
   address: address,
   from: from,
   peers: peers,
   chain: chain,
-  network: network
+  network: network,
+  db: db.sublevel('burnie', {valueEncoding: 'json'})
 })
 filter.add(burnie)
 
