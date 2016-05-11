@@ -2,12 +2,32 @@
   "name": "burnie",
   "version": "0.3.0",
   "description": "An SPV Bitcoin burn verification library built on webcoin",
+  "keywords": [
+    "bitcoin",
+    "burn",
+    "spv",
+    "webcoin"
+  ],
+  "homepage": "https://github.com/paulkernfeld/burnie",
+  "bugs": {
+    "url": "https://github.com/paulkernfeld/burnie/issues"
+  },
+  "license": "ISC",
+  "author": "Paul Kernfeld",
   "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paulkernfeld/burnie.git"
+  },
   "scripts": {
     "test": "standard"
   },
-  "author": "Paul Kernfeld",
-  "license": "ISC",
+  "dependencies": {
+    "bitcoinjs-lib": "^2.2.0",
+    "debug": "^2.2.0",
+    "inherits": "^2.0.1",
+    "map-stream": "0.0.x"
+  },
   "devDependencies": {
     "bitcoin-filter": "^0.0.2",
     "bitcoin-net": "^3.1.0",
@@ -19,25 +39,5 @@
     "standard": "^5.4.1",
     "webcoin-bitcoin": "^2.1.2",
     "webcoin-bitcoin-testnet": "0.0.6"
-  },
-  "dependencies": {
-    "bitcoinjs-lib": "^2.2.0",
-    "debug": "^2.2.0",
-    "inherits": "^2.0.1",
-    "map-stream": "0.0.x"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/paulkernfeld/burnie.git"
-  },
-  "keywords": [
-    "webcoin",
-    "spv",
-    "burn",
-    "bitcoin"
-  ],
-  "bugs": {
-    "url": "https://github.com/paulkernfeld/burnie/issues"
-  },
-  "homepage": "https://github.com/paulkernfeld/burnie"
+  }
 }
