@@ -83,7 +83,7 @@ Burnie.prototype.start = function () {
     if (value) {
       // Start on the block after the most recent cached one
       // TODO we could miss transactions like this
-      from = value.height + 1
+      from = value.height
     } else {
       from = self.from
     }
@@ -96,7 +96,7 @@ Burnie.prototype.start = function () {
       }
       debug('burnie starting blocks...')
 
-      var readStream = self.chain.createReadStream({ from: startBlock.header.getHash() })
+      var readStream = self.chain.createReadStream({ from: startBlock.header.getHash(), inclusive: false })
       readStream.pipe(self.txStream)
       readStream.on('data', function (block) {
         if (block.height % 1000 === 0) {

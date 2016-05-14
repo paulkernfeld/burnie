@@ -20,6 +20,7 @@ var Burnie = require('.')
 
 // The first Counterparty burn was at block height 278319.
 // Start downloading at height 278208 so we don't have to start at the beginning of time.
+// Note that this does not actually look at block 278208.
 var checkpointMainnet = {
   height: 278208, // we use a multiple of 2016, so that we can calculate future
   // difficulties without needing to check any blocks before this one
