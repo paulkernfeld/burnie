@@ -6,6 +6,7 @@ var CacheLiveStream = require('cache-live-stream')
 var debug = require('debug')('burnie')
 var inherits = require('inherits')
 var mapStream = require('map-stream')
+var ReadWriteLock = require('rwlock')
 
 var address = bitcoin.address
 var script = bitcoin.script
@@ -50,71 +51,75 @@ function Burnie (opts) {
   self.txStream = self.peers.createTransactionStream({ filtered: self.filtered })
   self.txStream.pipe(self.burnsStream)
 
-  bubbleError(this.peers, this, 'peers')
-  bubbleError(self.stream, self, 'stream')
-  bubbleError(self.burnsStream, self, 'burnsStream')
-  bubbleError(self.txStream, self, 'txStream')
-
   self.chain.on('block', function (block) {
     if (block.height % 1000 === 0) {
       debug('headers at', block.height)
     }
   })
 
-  // TODO: get webcoin API to handle this for us
-  self.peers.once('peer', function (peer) {
-    if (self.chain.tip.height >= opts.from) {
-      self.start()
-    } else {
-      var onSync = function (tip) {
-        if (tip.height >= opts.from) {
-          self.chain.removeListener('block', onSync)
-          self.start()
-        }
-      }
-      self.chain.on('block', onSync)
-    }
-  })
-}
-inherits(Burnie, EventEmitter)
+  // This makes sure we don't start the chain stream before it's ready
+  var chainLock = new ReadWriteLock()
 
-Burnie.prototype.start = function () {
-  var self = this
+  chainLock.writeLock(function (release) {
+    // TODO: get webcoin API to handle this for us
+    self.peers.once('peer', function (peer) {
+      if (self.chain.tip.height >= opts.from) {
+        release()
+      } else {
+        var onSync = function (tip) {
+          if (tip.height >= opts.from) {
+            self.chain.removeListener('block', onSync)
+            release()
+          }
+        }
+        self.chain.on('block', onSync)
+      }
+    })
+  })
 
   var makeStream = function (value, cb) {
-    var from
-    if (value) {
-      // Start on the block after the most recent cached one
-      // TODO we could miss transactions like this
-      from = value.height
-    } else {
-      from = self.from
-    }
+    chainLock.writeLock(function (release) {
+      release()
 
-    debug('burnie starting headers at height', from)
-    self.chain.getBlockAtHeight(from, function (err, startBlock) {
-      if (err) {
-        console.log('error looking up block at height', from)
-        return self.emit('error', err)
+      var from
+      if (value) {
+        // Start on the block after the most recent cached one
+        // TODO we could miss transactions like this
+        from = value.height
+      } else {
+        from = self.from
       }
-      debug('burnie starting blocks...')
 
-      var readStream = self.chain.createReadStream({ from: startBlock.header.getHash(), inclusive: false })
-      readStream.pipe(self.txStream)
-      readStream.on('data', function (block) {
-        if (block.height % 1000 === 0) {
-          debug('txs at', block.height)
+      debug('burnie starting headers at height', from)
+      self.chain.getBlockAtHeight(from, function (err, startBlock) {
+        if (err) {
+          console.log('error looking up block at height', from)
+          return self.emit('error', err)
         }
+        debug('burnie starting blocks...')
+
+        var readStream = self.chain.createReadStream({ from: startBlock.header.getHash(), inclusive: false })
+        readStream.pipe(self.txStream)
+        readStream.on('data', function (block) {
+          if (block.height % 1000 === 0) {
+            debug('txs at', block.height)
+          }
+        })
+        cb(null, self.burnsStream)
       })
-      cb(null, self.burnsStream)
     })
   }
 
-  this.cache = CacheLiveStream(this.db, makeStream)
-  this.cache.readable.pipe(this.stream)
+  self.cache = CacheLiveStream(this.db, makeStream)
+  self.cache.readable.pipe(this.stream)
 
+  bubbleError(this.peers, this, 'peers')
+  bubbleError(self.stream, self, 'stream')
+  bubbleError(self.burnsStream, self, 'burnsStream')
+  bubbleError(self.txStream, self, 'txStream')
   bubbleError(self.cache.readable, self, 'cache.readable')
 }
+inherits(Burnie, EventEmitter)
 
 Burnie.prototype.txToBurns = function (tx, cb) {
   debug('checking tx', tx.transaction.getId())
