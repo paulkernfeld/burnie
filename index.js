@@ -1,13 +1,16 @@
 var assert = require('assert')
 var EventEmitter = require('events')
-var address = require('bitcoinjs-lib').address
-var script = require('bitcoinjs-lib').script
-var Transaction = require('bitcoinjs-lib').Transaction
-var Block = require('bitcoinjs-lib').Block
+
+var bitcoin = require('bitcoinjs-lib')
+var CacheLiveStream = require('cache-live-stream')
+var debug = require('debug')('burnie')
 var inherits = require('inherits')
 var mapStream = require('map-stream')
-var debug = require('debug')('burnie')
-var CacheLiveStream = require('cache-live-stream')
+
+var address = bitcoin.address
+var script = bitcoin.script
+var Transaction = bitcoin.Transaction
+var Block = bitcoin.Block
 
 var bubbleError = function (from, to, name) {
   from.on('error', function (err) {
