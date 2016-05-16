@@ -51,7 +51,7 @@ testnetParams.blockchain.checkpoints = [ checkpointTestnet ]
 var testnet = process.argv[2] === '--testnet'
 var params = testnet ? testnetParams : mainnetParams
 var address = testnet ? 'mvCounterpartyXXXXXXXXXXXXXXW24Hef' : '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
-var from = testnet ? 155069 : 278318
+var from = testnet ? 153216 : 278208
 var network = testnet ? networks.testnet : networks.bitcoin
 
 // We need to pass in a PeerGroup
