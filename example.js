@@ -57,7 +57,7 @@ var network = testnet ? networks.testnet : networks.bitcoin
 // We need to pass in a PeerGroup
 var peers = new PeerGroup(params.net)
 
-var filter = new Filter(peers, { falsePositiveRate: 0.00001 })
+var filter = new Filter(peers)
 
 var masterDb = sublevel(levelup('./example.db'))
 var db = masterDb.sublevel(testnet ? 'testnet' : 'livenet')

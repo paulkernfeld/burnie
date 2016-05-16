@@ -187,7 +187,7 @@ Burnie.prototype.burnsToResult = function (burnInfo, cb) {
   }
 }
 
-// This provides an API for the bitcoin-filter package
+// Implement the Filterable interface for the bitcoin-filter package.
 Burnie.prototype.filterElements = function () {
   return [ this.pubkeyHash ]
 }
