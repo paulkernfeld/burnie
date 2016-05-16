@@ -55,6 +55,7 @@ function Burnie (opts) {
     if (block.height % 1000 === 0) {
       debug('headers at', block.height)
     }
+    self.emit('headers', block)
   })
 
   // This makes sure we don't start the chain stream before it's ready
@@ -97,6 +98,7 @@ function Burnie (opts) {
           return self.emit('error', err)
         }
         debug('burnie starting blocks...')
+        self.emit('headers', startBlock)
 
         var readStream = self.chain.createReadStream({ from: startBlock.header.getHash(), inclusive: false })
         readStream.pipe(self.txStream)
@@ -104,6 +106,7 @@ function Burnie (opts) {
           if (block.height % 1000 === 0) {
             debug('txs at', block.height)
           }
+          self.emit('txs', block)
         })
         cb(null, self.burnsStream)
       })
