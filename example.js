@@ -10,7 +10,7 @@ var utils = require('bitcoin-util')
 var mainnetParams = require('webcoin-bitcoin')
 var testnetParams = require('webcoin-bitcoin-testnet')
 var levelup = require('levelup')
-var sublevel = require('level-sublevel')
+var sublevel = require('subleveldown')
 var Burnie = require('.')
 
 // This example shows Bitcoins that were burned to buy units of the Counterparty currency.
@@ -59,9 +59,9 @@ var peers = new PeerGroup(params.net)
 
 var filter = new Filter(peers)
 
-var masterDb = sublevel(levelup('./example.db'))
-var db = masterDb.sublevel(testnet ? 'testnet' : 'livenet')
-var chain = new Blockchain(params.blockchain, db.sublevel('chain'))
+var masterDb = levelup('./example.db')
+var db = sublevel(masterDb, testnet ? 'testnet' : 'livenet')
+var chain = new Blockchain(params.blockchain, sublevel(db, 'chain'))
 
 var burnie = Burnie({
   address: address,
@@ -69,7 +69,7 @@ var burnie = Burnie({
   peers: peers,
   chain: chain,
   network: network,
-  db: db.sublevel('burnie', {valueEncoding: 'json'})
+  db: sublevel(db, 'burnie', {valueEncoding: 'json'})
 })
 filter.add(burnie)
 
