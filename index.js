@@ -148,7 +148,6 @@ function Burnie (opts) {
           if (block.height % 1000 === 0) {
             debug('txs at', block.height)
           }
-          self.emit('txs', block)
         })
         cb(null, self.burnsStream)
       })
@@ -169,6 +168,7 @@ inherits(Burnie, EventEmitter)
 Burnie.prototype.burnsToResult = function (burnInfo, cb) {
   var burns = burnInfo.burns
 
+  this.emit('txs', burnInfo.block)
   if (!burns) {
     // This was just a checkpointing object w/ no TX data
     cb()
