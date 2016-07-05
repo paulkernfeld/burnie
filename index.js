@@ -135,13 +135,13 @@ function Burnie (opts) {
         from = self.from
       }
 
-      debug('burnie will start blocks at height', from)
+      debug('burnie will start txs at height', from)
       self.chain.getBlockAtHeight(from, function (err, startBlock) {
         if (err) {
           console.log('error looking up block at height', from)
           return self.emit('error', err)
         }
-        debug('burnie starting blocks...')
+        debug('burnie starting txs...')
         self.emit('headers', startBlock)
 
         var readStream = self.chain.createReadStream({ from: startBlock.header.getHash(), inclusive: false })
