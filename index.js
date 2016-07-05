@@ -49,6 +49,10 @@ function Burnie (opts) {
   this.burnsStream = through2.obj(function (block, enc, cb) {
     var through2Self = this
 
+    var blockSummary = {
+      height: block.height,
+      header: block.header.toHex()
+    }
     block.transactions.forEach(function (tx) {
       var burns = []
       debug('checking tx', tx.getId(), 'height', block.height)
@@ -68,23 +72,17 @@ function Burnie (opts) {
 
         debug('valid output found', o)
         burns.push({
-          tx: {
-            transaction: tx.toHex(),
-            block: {
-              height: block.height,
-              header: block.header.toHex()
-            }
-          },
+          tx: tx.toHex(),
           satoshis: output.value.toNumber()
         })
       })
       through2Self.push({
-        height: block.height,
+        block: blockSummary,
         burns: burns
       })
     })
     through2Self.push({
-      height: block.height
+      block: blockSummary
     })
 
     cb()
@@ -130,7 +128,7 @@ function Burnie (opts) {
       if (value) {
         // Start on the block after the most recent cached one
         // TODO we could miss transactions like this
-        from = value.height
+        from = value.block.height
       } else {
         from = self.from
       }
@@ -186,10 +184,10 @@ Burnie.prototype.burnsToResult = function (burnInfo, cb) {
     var burn = burns[0]
     cb(null, {
       tx: {
-        transaction: Transaction.fromHex(burn.tx.transaction),
+        transaction: Transaction.fromHex(burn.tx),
         block: {
-          height: burn.tx.block.height,
-          header: Block.fromHex(burn.tx.block.header)
+          height: burnInfo.block.height,
+          header: Block.fromHex(burnInfo.block.header)
         }
       },
       satoshis: burn.satoshis
