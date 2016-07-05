@@ -7,6 +7,7 @@ var debug = require('debug')('burnie')
 var inherits = require('inherits')
 var mapStream = require('map-stream')
 var ReadWriteLock = require('rwlock')
+var through2 = require('through2')
 
 var address = bitcoin.address
 var script = bitcoin.script
@@ -45,11 +46,54 @@ function Burnie (opts) {
   this.network = opts.network
   this.db = opts.db
 
-  this.burnsStream = mapStream(this.txToBurns.bind(this))
+  this.burnsStream = through2.obj(function (block, enc, cb) {
+    var through2Self = this
+
+    block.transactions.forEach(function (tx) {
+      var burns = []
+      debug('checking tx', tx.getId(), 'height', block.height)
+      tx.outs.forEach(function (output, o) {
+        // Ignore outputs that aren't pay-to-pubkey-hash
+        if (!script.isPubKeyHashOutput(output.script)) {
+          debug('ignoring non-pay-to-pubkey-hash output', o)
+          return
+        }
+
+        // Ignore outputs to the wrong address
+        var payToAddress = address.fromOutputScript(output.script, self.network)
+        if (payToAddress !== self.address) {
+          debug('ignoring output w/ payment to', o, payToAddress)
+          return
+        }
+
+        debug('valid output found', o)
+        burns.push({
+          tx: {
+            transaction: tx.toHex(),
+            block: {
+              height: block.height,
+              header: block.header.toHex()
+            }
+          },
+          satoshis: output.value.toNumber()
+        })
+      })
+      through2Self.push({
+        height: block.height,
+        burns: burns
+      })
+    })
+    through2Self.push({
+      height: block.height
+    })
+
+    cb()
+  })
+
   this.stream = mapStream(this.burnsToResult.bind(this))
 
-  self.txStream = self.peers.createTransactionStream({ filtered: self.filtered })
-  self.txStream.pipe(self.burnsStream)
+  self.blockStream = self.peers.createBlockStream({ filtered: self.filtered })
+  self.blockStream.pipe(self.burnsStream)
 
   self.chain.on('block', function (block) {
     if (block.height % 1000 === 0) {
@@ -101,7 +145,7 @@ function Burnie (opts) {
         self.emit('headers', startBlock)
 
         var readStream = self.chain.createReadStream({ from: startBlock.header.getHash(), inclusive: false })
-        readStream.pipe(self.txStream)
+        readStream.pipe(self.blockStream)
         readStream.on('data', function (block) {
           if (block.height % 1000 === 0) {
             debug('txs at', block.height)
@@ -119,52 +163,18 @@ function Burnie (opts) {
   bubbleError(this.peers, this, 'peers')
   bubbleError(self.stream, self, 'stream')
   bubbleError(self.burnsStream, self, 'burnsStream')
-  bubbleError(self.txStream, self, 'txStream')
+  bubbleError(self.blockStream, self, 'blockStream')
   bubbleError(self.cache.readable, self, 'cache.readable')
 }
 inherits(Burnie, EventEmitter)
 
-Burnie.prototype.txToBurns = function (tx, cb) {
-  debug('checking tx', tx.transaction.getId())
-  var burns = []
-  var self = this
-
-  tx.transaction.outs.forEach(function (output, o) {
-    // Ignore outputs that aren't pay-to-pubkey-hash
-    if (!script.isPubKeyHashOutput(output.script)) {
-      debug('ignoring non-pay-to-pubkey-hash output', o)
-      return
-    }
-
-    // Ignore outputs to the wrong address
-    var payToAddress = address.fromOutputScript(output.script, self.network)
-    if (payToAddress !== self.address) {
-      debug('ignoring output w/ payment to', o, payToAddress)
-      return
-    }
-
-    debug('valid output found', o)
-    burns.push({
-      tx: {
-        transaction: tx.transaction.toHex(),
-        block: {
-          height: tx.block.height,
-          header: tx.block.header.toHex()
-        }
-      },
-      satoshis: output.value.toNumber()
-    })
-  })
-
-  cb(null, {
-    height: tx.block.height,
-    burns: burns
-  })
-}
-
 Burnie.prototype.burnsToResult = function (burnInfo, cb) {
   var burns = burnInfo.burns
-  if (burns.length === 0) {
+
+  if (!burns) {
+    // This was just a checkpointing object w/ no TX data
+    cb()
+  } else if (burns.length === 0) {
     debug('no valid outputs, ignoring')
     cb()
   } else if (burns.length > 1) {

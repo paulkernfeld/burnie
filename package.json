@@ -28,7 +28,8 @@
     "debug": "^2.2.0",
     "inherits": "^2.0.1",
     "map-stream": "0.0.x",
-    "rwlock": "^5.0.0"
+    "rwlock": "^5.0.0",
+    "through2": "^2.0.1"
   },
   "devDependencies": {
     "bitcoin-filter": "^0.1.1",
