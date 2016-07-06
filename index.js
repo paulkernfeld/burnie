@@ -168,7 +168,11 @@ inherits(Burnie, EventEmitter)
 Burnie.prototype.burnsToResult = function (burnInfo, cb) {
   var burns = burnInfo.burns
 
-  this.emit('txs', burnInfo.block)
+  var blockObj = {
+    height: burnInfo.block.height,
+    header: Block.fromHex(burnInfo.block.header)
+  }
+  this.emit('txs', blockObj)
   if (!burns) {
     // This was just a checkpointing object w/ no TX data
     cb()
@@ -185,10 +189,7 @@ Burnie.prototype.burnsToResult = function (burnInfo, cb) {
     cb(null, {
       tx: {
         transaction: Transaction.fromHex(burn.tx),
-        block: {
-          height: burnInfo.block.height,
-          header: Block.fromHex(burnInfo.block.header)
-        }
+        block: blockObj
       },
       satoshis: burn.satoshis
     })
