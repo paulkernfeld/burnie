@@ -53,6 +53,7 @@ var params = testnet ? testnetParams : mainnetParams
 var address = testnet ? 'mvCounterpartyXXXXXXXXXXXXXXW24Hef' : '1CounterpartyXXXXXXXXXXXXXXXUWLpVr'
 var from = testnet ? 153216 : 278208
 var network = testnet ? networks.testnet : networks.bitcoin
+var maxBlockHeight = testnet ? 283000 : 300000  // pretty arbitrary
 
 // We need to pass in a PeerGroup
 var peers = new PeerGroup(params.net)
@@ -83,6 +84,13 @@ burnie.stream.on('data', function (burn) {
     }
   }
   console.log('satoshis', burn.satoshis.toString(), '\n')
+})
+
+burnie.on('txs', function (block) {
+  if (block.height >= maxBlockHeight) {
+    console.log('blockchain is up to date')
+    process.exit(0)
+  }
 })
 
 peers.once('peer', function () {
