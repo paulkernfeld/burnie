@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
-var buffertools = require('buffertools')
 var bitcoin = require('bitcoinjs-lib')
 var networks = bitcoin.networks
 var PeerGroup = require('bitcoin-net').PeerGroup
 var Blockchain = require('blockchain-spv')
 var Filter = require('bitcoin-filter')
 var utils = require('bitcoin-util')
+var reverse = require('buffer-reverse')
 var mainnetParams = require('webcoin-bitcoin')
 var testnetParams = require('webcoin-bitcoin-testnet')
 var levelup = require('levelup')
@@ -75,7 +75,7 @@ var burnie = Burnie({
 filter.add(burnie)
 
 burnie.stream.on('data', function (burn) {
-  console.log('txid', buffertools.reverse(burn.tx.transaction.getHash()).toString('hex'))
+  console.log('txid', reverse(burn.tx.transaction.getHash()).toString('hex'))
   for (var i in burn.tx.transaction.ins) {
     var input = burn.tx.transaction.ins[i]
     if (bitcoin.script.isPubKeyHashInput(input.script)) {
