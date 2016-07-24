@@ -1,5 +1,7 @@
 Burnie is an SPV Bitcoin burn verification library built on webcoin.
 
+[![Build Status](https://travis-ci.org/paulkernfeld/burnie.svg)](https://travis-ci.org/paulkernfeld/burnie) [![npm](https://img.shields.io/npm/dt/burnie.svg)](https://www.npmjs.com/package/burnie)
+
 Overview
 --------
 Burnie allows you to easily verify that Bitcoins have been "[burned](http://bitcoin.stackexchange.com/questions/24187/what-is-proof-of-burn)," i.e. sent to an unspendable address so that they are destroyed. Proof-of-burn has been used as a mining technique for alternative cryptocurrencies, and it has also been proposed as a DNS registration technique.
