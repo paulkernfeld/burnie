@@ -5,7 +5,6 @@ var bitcoin = require('bitcoinjs-lib')
 var CacheLiveStream = require('cache-live-stream')
 var debug = require('debug')('burnie')
 var inherits = require('inherits')
-var mapStream = require('map-stream')
 var ReadWriteLock = require('rwlock')
 var through2 = require('through2')
 
@@ -45,6 +44,7 @@ function Burnie (opts) {
   this.filtered = opts.filtered != null ? opts.filtered : true
   this.network = opts.network
   this.db = opts.db
+  this.endDelay = opts.endDelay
 
   this.burnsStream = through2.obj(function (block, enc, cb) {
     var through2Self = this
@@ -88,7 +88,7 @@ function Burnie (opts) {
     cb()
   })
 
-  this.stream = mapStream(this.burnsToResult.bind(this))
+  this.stream = through2.obj(this.burnsToResult())
 
   self.blockStream = self.peers.createBlockStream({ filtered: self.filtered })
   self.blockStream.pipe(self.burnsStream)
@@ -165,34 +165,41 @@ function Burnie (opts) {
 }
 inherits(Burnie, EventEmitter)
 
-Burnie.prototype.burnsToResult = function (burnInfo, cb) {
-  var burns = burnInfo.burns
+Burnie.prototype.burnsToResult = function () {
+  var self = this
 
-  var blockObj = {
-    height: burnInfo.block.height,
-    header: Block.fromHex(burnInfo.block.header)
-  }
-  this.emit('txs', blockObj)
-  if (!burns) {
-    // This was just a checkpointing object w/ no TX data
-    cb()
-  } else if (burns.length === 0) {
-    debug('no valid outputs, ignoring')
-    cb()
-  } else if (burns.length > 1) {
-    debug('multiple valid outputs, ignoring')
-    cb()
-  } else {
-    assert.equal(burns.length, 1)
+  return function (burnInfo, enc, cb) {
+    var burns = burnInfo.burns
 
-    var burn = burns[0]
-    cb(null, {
-      tx: {
-        transaction: Transaction.fromHex(burn.tx),
-        block: blockObj
-      },
-      satoshis: burn.satoshis
-    })
+    var blockObj = {
+      height: burnInfo.block.height,
+      header: Block.fromHex(burnInfo.block.header)
+    }
+    self.emit('txs', blockObj)
+    if (!burns) {
+      // This was just a checkpointing object w/ no TX data
+    } else if (burns.length === 0) {
+      debug('no valid outputs, ignoring')
+    } else if (burns.length > 1) {
+      debug('multiple valid outputs, ignoring')
+    } else {
+      assert.equal(burns.length, 1)
+
+      var burn = burns[0]
+      this.push({
+        tx: {
+          transaction: Transaction.fromHex(burn.tx),
+          block: blockObj
+        },
+        satoshis: burn.satoshis
+      })
+    }
+
+    var txsDelay = new Date().getTime() / 1000 - blockObj.header.timestamp
+    if (self.endDelay && txsDelay < self.endDelay) {
+      this.push(null)
+    }
+    cb()
   }
 }
 
