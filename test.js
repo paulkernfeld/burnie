@@ -103,11 +103,9 @@ var runTest = function (testnet) {
 
     peers.once('peer', function () {
       t.pass('saw a peer')
-      chain.getLocator(function (err, locator) {
-        if (err) throw err
-        t.ok(locator, 'got chain locator')
-        peers.createHeaderStream({ locator: locator }).pipe(chain.createWriteStream())
-      })
+      var headerStream = peers.createHeaderStream()
+      chain.createLocatorStream().pipe(headerStream)
+      headerStream.pipe(chain.createWriteStream())
     })
     peers.connect()
   })

@@ -32,7 +32,7 @@
   },
   "devDependencies": {
     "bitcoin-filter": "^0.1.1",
-    "bitcoin-net": "^3.1.0",
+    "bitcoin-net": "^4.4.0",
     "blockchain-spv": "^2.0.0",
     "brfs": "^1.4.3",
     "buffer-reverse": "^1.0.1",
@@ -40,7 +40,7 @@
     "standard": "^8.0.0",
     "subleveldown": "^2.1.0",
     "tape": "^4.6.0",
-    "webcoin-bitcoin": "^2.1.2",
-    "webcoin-bitcoin-testnet": "0.1.0"
+    "webcoin-bitcoin": "^3.1.1",
+    "webcoin-bitcoin-testnet": "1.1.1"
   }
 }
