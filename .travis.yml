@@ -1,6 +1,6 @@
 language: node_js
 node_js:
   - "node"
-script: npm test && node example
+script: npm test
 env:
   - DEBUG=burnie

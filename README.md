@@ -13,4 +13,4 @@ Burnie is based on [webcoin](https://github.com/mappum/webcoin). This gives it t
 
 API Documentation/Example
 -------------------------
-See `example.js`.
+See `test.js`.
