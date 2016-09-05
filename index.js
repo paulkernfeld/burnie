@@ -106,12 +106,14 @@ function Burnie (opts) {
   chainLock.writeLock(function (release) {
     // TODO: get webcoin API to handle this for us
     self.peers.once('peer', function (peer) {
-      if (self.chain.tip.height >= opts.from) {
+      if (self.chain.tip.height > opts.from) {
+        debug('chain tip is ready')
         release()
       } else {
         var onSync = function (tip) {
-          if (tip.height >= opts.from) {
+          if (tip.height > opts.from) {
             self.chain.removeListener('block', onSync)
+            debug('chain tip is now ready', tip.height, opts.from)
             release()
           }
         }
