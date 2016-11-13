@@ -27,7 +27,6 @@
     "cache-live-stream": "^0.1.2",
     "debug": "^2.3.2",
     "inherits": "^2.0.3",
-    "rwlock": "^5.0.0",
     "through2": "^2.0.1"
   },
   "devDependencies": {

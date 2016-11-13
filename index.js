@@ -5,7 +5,6 @@ var bitcoin = require('bitcoinjs-lib')
 var CacheLiveStream = require('cache-live-stream')
 var debug = require('debug')('burnie')
 var inherits = require('inherits')
-var ReadWriteLock = require('rwlock')
 var through2 = require('through2')
 
 var address = bitcoin.address
@@ -100,63 +99,47 @@ function Burnie (opts) {
     self.emit('headers', block)
   })
 
-  // This makes sure we don't start the chain stream before it's ready
-  var chainLock = new ReadWriteLock()
-
-  chainLock.writeLock(function (release) {
-    // TODO: get webcoin API to handle this for us
-    self.peers.once('peer', function (peer) {
-      if (self.chain.tip.height > opts.from) {
-        debug('chain tip is ready')
-        release()
-      } else {
-        var onSync = function (tip) {
-          if (tip.height > opts.from) {
-            self.chain.removeListener('block', onSync)
-            debug('chain tip is now ready', tip.height, opts.from)
-            release()
-          }
-        }
-        self.chain.on('block', onSync)
-      }
-    })
-  })
-
   var makeStream = function (value, cb) {
-    chainLock.writeLock(function (release) {
-      release()
+    var from
+    if (value) {
+      // Start on the block after the most recent cached one
+      // TODO we could miss transactions like this
+      from = value.block.height
+    } else {
+      from = self.from
+    }
 
-      var from
-      if (value) {
-        // Start on the block after the most recent cached one
-        // TODO we could miss transactions like this
-        from = value.block.height
-      } else {
-        from = self.from
+    debug('burnie will start txs at height', from)
+    self.chain.getBlockAtHeight(from, function (err, startBlock) {
+      if (err) {
+        console.log('error looking up block at height', from)
+        return self.emit('error', err)
       }
+      debug('burnie starting txs...')
+      self.emit('headers', startBlock)
 
-      debug('burnie will start txs at height', from)
-      self.chain.getBlockAtHeight(from, function (err, startBlock) {
-        if (err) {
-          console.log('error looking up block at height', from)
-          return self.emit('error', err)
+      var readStream = self.chain.createReadStream({ from: startBlock.header.getHash(), inclusive: false })
+      readStream.pipe(self.blockStream)
+      readStream.on('data', function (block) {
+        if (block.height % 1000 === 0) {
+          debug('txs at', block.height)
         }
-        debug('burnie starting txs...')
-        self.emit('headers', startBlock)
-
-        var readStream = self.chain.createReadStream({ from: startBlock.header.getHash(), inclusive: false })
-        readStream.pipe(self.blockStream)
-        readStream.on('data', function (block) {
-          if (block.height % 1000 === 0) {
-            debug('txs at', block.height)
-          }
-        })
-        cb(null, self.burnsStream)
       })
+      cb(null, self.burnsStream)
     })
   }
 
-  self.cache = CacheLiveStream(this.db, makeStream)
+  var waitForChainReady = function (value, cb) {
+    if (self.chain.ready) {
+      makeStream(value, cb)
+    } else {
+      self.chain.on('ready', function () {
+        makeStream(value, cb)
+      })
+    }
+  }
+
+  self.cache = CacheLiveStream(this.db, waitForChainReady)
   self.cache.readable.pipe(this.stream)
 
   bubbleError(this.peers, this, 'peers')
