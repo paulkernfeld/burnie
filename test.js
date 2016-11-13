@@ -77,7 +77,7 @@ var runTest = function (testnet) {
       peers: peers,
       chain: chain,
       network: network,
-      db: sublevel(db, 'burnie', { valueEncoding: 'json' }),
+      db: sublevel(db, 'burnie', { keyEncoding: 'json', valueEncoding: 'json' }),
       endDelay: 3600 * 3
     })
     filter.add(burnie)
